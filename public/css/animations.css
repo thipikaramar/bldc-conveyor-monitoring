@@ -1,0 +1,52 @@
+@keyframes pulse-emerald {
+  0% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.7); }
+  100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+}
+
+@keyframes pulse-rose {
+  0% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); border-color: rgba(239, 68, 68, 0.8); }
+  50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.9); border-color: #ef4444; }
+  100% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); border-color: rgba(239, 68, 68, 0.8); }
+}
+
+@keyframes pulse-amber {
+  0% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 22px rgba(245, 158, 11, 0.7); }
+  100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+}
+
+@keyframes live-dot-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.ring-normal {
+  border-color: #10b981 !important;
+  animation: pulse-emerald 2.5s infinite ease-in-out;
+}
+
+.ring-warning {
+  border-color: #f59e0b !important;
+  animation: pulse-amber 2s infinite ease-in-out;
+}
+
+.ring-critical {
+  border-color: #ef4444 !important;
+  animation: pulse-rose 1.2s infinite ease-in-out;
+}
+
+.ring-stopped {
+  border-color: #64748b !important;
+  box-shadow: none !important;
+}
+
+.status-dot-live {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: live-dot-blink 1.5s infinite;
+}

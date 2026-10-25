@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLDC Conveyor Belt Health Monitoring & AI Predictive Maintenance | Vercel</title>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js 4.4 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- App Stylesheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+
+  <!-- ==============================================================================
+       1. APP HEADER & MASTER CONVEYOR POWER CONTROLLER
+       ============================================================================== -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo-icon">⚡</div>
+      <div class="brand-text">
+        <h1>BLDC CONVEYOR AI MONITOR</h1>
+        <div class="subtext">Condition Telemetry & Predictive Maintenance Platform | Vercel Serverless</div>
+      </div>
+    </div>
+
+    <!-- Master Conveyor Power Toggle & Status -->
+    <div class="header-actions">
+      <!-- Master ON/OFF Button -->
+      <button class="btn-conveyor-power btn-power-on" id="btnConveyorPower" title="Toggle Conveyor Belt Power">
+        <span class="power-indicator-dot"></span>
+        <span>▶️ START CONVEYOR</span>
+      </button>
+
+      <!-- Live ESP32 Hardware Status Badge -->
+      <div class="status-pill pill-stopped" id="headerEsp32Badge" title="Physical ESP32 hardware streaming status">
+        <span class="status-dot" id="headerEsp32Dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;"></span>
+        <span id="headerEsp32Text">Simulation (ESP32 Offline)</span>
+      </div>
+
+      <!-- Cloud DB Status -->
+      <div class="status-pill" style="border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+        <span>☁️ Vercel API</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==============================================================================
+       2. MAIN DASHBOARD CONTENT
+       ============================================================================== -->
+  <main class="main-container">
+
+    <!-- Hero Executive Condition Banner -->
+    <div class="hero-banner">
+      <!-- Master Health Score Ring -->
+      <div class="master-ring-box">
+        <div class="condition-ring ring-stopped" id="heroHealthRing">
+          <span class="score-val" id="heroHealthVal">100.0%</span>
+          <span class="score-lbl">Health Index</span>
+        </div>
+        <div class="ring-meta">
+          <h2>Conveyor Drive</h2>
+          <span class="status-pill pill-stopped" id="heroStateBadge">STOPPED</span>
+        </div>
+      </div>
+
+      <!-- ISO 10816-3 Mechanical Vibration Severity -->
+      <div class="hero-stat-card">
+        <div class="stat-label">ISO 10816-3 Standard</div>
+        <div class="stat-val" id="heroIsoZone" style="color: #38bdf8;">Zone A</div>
+        <div class="stat-desc">Mechanical Vibration Zone</div>
+      </div>
+
+      <!-- Anomaly Probability Score -->
+      <div class="hero-stat-card">
+        <div class="stat-label">Anomaly Probability</div>
+        <div class="stat-val" id="heroAnomalyScore" style="color: #10b981;">0.0%</div>
+        <div class="stat-desc">Multivariate Covariance Model</div>
+      </div>
+
+      <!-- Linear Belt Velocity -->
+      <div class="hero-stat-card">
+        <div class="stat-label">Linear Belt Speed</div>
+        <div class="stat-val" id="valBeltSpeed" style="color: #ec4899;">0.00 m/s</div>
+        <div class="stat-desc">Drive Pulley Transmission (80mm)</div>
+      </div>
+    </div>
+
+    <!-- 5 Multi-Sensor Telemetry Cards -->
+    <div class="telemetry-grid">
+      <!-- 1. Voltage -->
+      <div class="metric-card card-volt">
+        <div class="metric-header">
+          <span class="metric-title">Supply Voltage</span>
+          <span class="metric-icon">🔋</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-val" id="valVolt">12.00</span>
+          <span class="metric-unit">V</span>
+        </div>
+        <div class="metric-subtag">INA226 (I²C 0x40)</div>
+      </div>
+
+      <!-- 2. Current -->
+      <div class="metric-card card-curr">
+        <div class="metric-header">
+          <span class="metric-title">Phase Current</span>
+          <span class="metric-icon">⚡</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-val" id="valCurr">0.05</span>
+          <span class="metric-unit">A</span>
+        </div>
+        <div class="metric-subtag">INA226 Shunt Sensor</div>
+      </div>
+
+      <!-- 3. Speed / RPM -->
+      <div class="metric-card card-speed">
+        <div class="metric-header">
+          <span class="metric-title">Motor Speed</span>
+          <span class="metric-icon">🔄</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-val" id="valRPM">0</span>
+          <span class="metric-unit">RPM</span>
+        </div>
+        <div class="metric-subtag">Hall Effect Interrupt</div>
+      </div>
+
+      <!-- 4. Temperature -->
+      <div class="metric-card card-temp">
+        <div class="metric-header">
+          <span class="metric-title">Stator Temp</span>
+          <span class="metric-icon">🌡️</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-val" id="valTemp">26.5</span>
+          <span class="metric-unit">°C</span>
+        </div>
+        <div class="metric-subtag">DS18B20 1-Wire Digital</div>
+      </div>
+
+      <!-- 5. Vibration RMS -->
+      <div class="metric-card card-vib">
+        <div class="metric-header">
+          <span class="metric-title">Vibration RMS</span>
+          <span class="metric-icon">📈</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-val" id="valVib">0.040</span>
+          <span class="metric-unit">g</span>
+        </div>
+        <div class="metric-subtag">ADXL345 (I²C 0x53)</div>
+      </div>
+    </div>
+
+    <!-- Conveyor Belt 2D Canvas Digital Twin -->
+    <div class="canvas-card">
+      <div class="card-header-row">
+        <div class="card-title">
+          <span>📦</span> Industrial BLDC Conveyor Belt Digital Twin
+          <span class="status-pill pill-normal" style="font-size: 10px; margin-left: 8px;">2.5D Isometric Engine</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="status-pill" id="hudItemCounter" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">📦 Logged: 0 pkgs</span>
+        </div>
+      </div>
+      <div class="canvas-wrapper">
+        <canvas id="conveyorCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Real-Time Telemetry Charts -->
+    <div class="charts-grid">
+      <!-- Electrical Dynamics -->
+      <div class="chart-card">
+        <div class="card-title" style="font-size: 13.5px;">⚡ Electrical Dynamics (Voltage & Current vs Time)</div>
+        <div class="chart-wrapper">
+          <canvas id="chartElectrical"></canvas>
+        </div>
+      </div>
+
+      <!-- Motor Speed (RPM) -->
+      <div class="chart-card">
+        <div class="card-title" style="font-size: 13.5px;">🔄 Motor Shaft Speed (RPM vs Time)</div>
+        <div class="chart-wrapper">
+          <canvas id="chartRPM"></canvas>
+        </div>
+      </div>
+
+      <!-- Stator Temperature -->
+      <div class="chart-card">
+        <div class="card-title" style="font-size: 13.5px;">🌡️ Stator Coil Temperature (°C vs Time)</div>
+        <div class="chart-wrapper">
+          <canvas id="chartTemp"></canvas>
+        </div>
+      </div>
+
+      <!-- Vibration RMS -->
+      <div class="chart-card">
+        <div class="card-title" style="font-size: 13.5px;">📈 Structural Vibration Amplitude (g RMS vs Time)</div>
+        <div class="chart-wrapper">
+          <canvas id="chartVibration"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls & Fault Injection Bench -->
+    <div class="controls-panel">
+      <!-- Control Slider & Fault Buttons -->
+      <div class="control-card">
+        <div class="card-title">🎛️ Motor Speed & Fault Injection Bench</div>
+        
+        <div class="slider-group">
+          <div class="slider-label-row">
+            <span>Target Speed (ESC Throttle)</span>
+            <b id="valSliderRpm" style="color: #38bdf8;">3600 RPM</b>
+          </div>
+          <input type="range" min="1000" max="4800" step="100" value="3600" class="custom-range" id="sliderRpm">
+        </div>
+
+        <div style="margin-top: 18px;">
+          <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 6px;">Simulate Industrial Failure Mode:</div>
+          <div class="fault-buttons-grid">
+            <button class="btn-fault active-normal" data-fault="NONE">🟢 Normal Run</button>
+            <button class="btn-fault" data-fault="JAM">⚠️ Belt Jam / Stall</button>
+            <button class="btn-fault" data-fault="BEARING_WEAR">🚨 Bearing Wear</button>
+            <button class="btn-fault" data-fault="OVERHEAT">🔥 Overheating</button>
+            <button class="btn-fault" data-fault="VOLTAGE_SAG">⚡ Bus Voltage Sag</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Diagnostics & Actionable Orders -->
+      <div class="control-card ai-diagnosis-card">
+        <div class="card-title" style="color: #38bdf8;">🤖 AI Diagnostic & Fault Isolation Engine</div>
+        
+        <div style="margin-top: 10px;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Root Cause Deduction:</div>
+          <div class="diagnosis-box" id="aiRootCauseText">
+            Conveyor belt is halted in controlled standby mode.
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Prescribed Maintenance Order:</div>
+          <div class="diagnosis-box" style="border-left-color: #10b981;" id="aiRecommendationText">
+            Press START CONVEYOR button or send run command to resume operations.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Application Scripts -->
+  <script src="/js/conveyor_canvas.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
