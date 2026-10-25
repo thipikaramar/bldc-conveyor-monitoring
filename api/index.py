@@ -155,6 +155,10 @@ def update_physics():
 
         fault = state.active_fault
 
+        # Numerically stable smoothing factor: alpha in [0, 1)
+        decay_factor = 1.0 - math.exp(-3.0 * dt)
+        slow_decay = 1.0 - math.exp(-1.0 * dt)
+
         if state.running:
             if fault == "JAM":
                 # Belt stuck: RPM plunges to zero, current surges dramatically
@@ -162,41 +166,42 @@ def update_physics():
                 state.voltage = max(9.4, 12.0 - 0.22 * 14.5 + random.uniform(-0.1, 0.1))
                 state.current = min(15.2, state.current + (14.2 - state.current) * dt * 2.0 + random.uniform(-0.2, 0.2))
                 state.temperature = min(88.0, state.temperature + 4.5 * dt)
-                state.vibration_rms = 0.45 + random.uniform(-0.05, 0.05)
+                state.vibration_rms = max(0.05, 0.45 + random.uniform(-0.05, 0.05))
             elif fault == "BEARING_WEAR":
                 # High vibration chatter
                 target = state.target_rpm * random.uniform(0.92, 0.98)
-                state.current_rpm += (target - state.current_rpm) * dt * 2.0
+                state.current_rpm = max(0.0, state.current_rpm + (target - state.current_rpm) * decay_factor)
                 state.voltage = 11.8 + random.uniform(-0.08, 0.08)
                 state.current = 4.2 + random.uniform(-0.2, 0.3)
                 state.temperature = min(68.0, state.temperature + 0.8 * dt)
-                state.vibration_rms = 1.35 + random.uniform(-0.15, 0.25)
+                state.vibration_rms = max(0.1, 1.35 + random.uniform(-0.15, 0.25))
             elif fault == "OVERHEAT":
                 # Rapid thermal escalation
-                state.current_rpm += (state.target_rpm - state.current_rpm) * dt * 3.0
+                state.current_rpm = max(0.0, state.current_rpm + (state.target_rpm - state.current_rpm) * decay_factor)
                 state.voltage = 11.6 + random.uniform(-0.05, 0.05)
                 state.current = 5.8 + random.uniform(-0.15, 0.15)
                 state.temperature = min(82.0, state.temperature + 2.2 * dt)
-                state.vibration_rms = 0.38 + random.uniform(-0.04, 0.04)
+                state.vibration_rms = max(0.05, 0.38 + random.uniform(-0.04, 0.04))
             elif fault == "VOLTAGE_SAG":
                 # Depleted bus
                 state.voltage = 9.8 + random.uniform(-0.1, 0.1)
-                state.current_rpm += ((state.target_rpm * 0.75) - state.current_rpm) * dt * 2.0
+                target = state.target_rpm * 0.75
+                state.current_rpm = max(0.0, state.current_rpm + (target - state.current_rpm) * decay_factor)
                 state.current = 6.4 + random.uniform(-0.2, 0.2)
                 state.temperature = min(54.0, state.temperature + 0.4 * dt)
-                state.vibration_rms = 0.22 + random.uniform(-0.03, 0.03)
+                state.vibration_rms = max(0.05, 0.22 + random.uniform(-0.03, 0.03))
             else:
                 # Nominal Running
-                state.current_rpm += (state.target_rpm - state.current_rpm) * dt * 3.0
+                state.current_rpm = max(0.0, state.current_rpm + (state.target_rpm - state.current_rpm) * decay_factor)
                 state.voltage = 12.05 + random.uniform(-0.05, 0.05)
                 state.current = 2.45 + (state.current_rpm / 3600.0) * 0.6 + random.uniform(-0.1, 0.1)
                 # Steady nominal temp ~ 38.5 C
                 target_temp = 38.5 + (state.current_rpm / 3600.0) * 5.0
-                state.temperature += (target_temp - state.temperature) * dt * 0.1
-                state.vibration_rms = 0.14 + (state.current_rpm / 3600.0) * 0.06 + random.uniform(-0.02, 0.02)
+                state.temperature += (target_temp - state.temperature) * slow_decay * 0.15
+                state.vibration_rms = max(0.02, 0.14 + (state.current_rpm / 3600.0) * 0.06 + random.uniform(-0.02, 0.02))
         else:
             # STOPPED
-            state.current_rpm = max(0.0, state.current_rpm - 2500.0 * dt)
+            state.current_rpm = max(0.0, state.current_rpm - 3500.0 * dt)
             state.voltage = 12.2 + random.uniform(-0.03, 0.03)
             state.current = max(0.04, state.current - 4.0 * dt)
             state.temperature = max(26.0, state.temperature - 0.4 * dt)
